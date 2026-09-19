@@ -29,10 +29,41 @@ dp.update.outer_middleware(ErrorHandlerMiddleware())
 
 # --- Service Initialization ---
 sheets = SheetsService(str(config.google_credentials_json), config.spreadsheet_id)
-openai = OpenAIService(config.openai_api_key.get_secret_value())
+openai = OpenAIService(
+    config.openai_api_key.get_secret_value(),
+    transaction_model=config.openai_transaction_model,
+    advice_model=config.openai_advice_model,
+)
 
 # --- Constants ---
 NETWORK_TIMEOUT = 25.0
+DEFAULT_REFERENCE_DATA = [
+    ["Расходы", "Ежедневные", "Продукты"],
+    ["Расходы", "Ежедневные", "Транспорт"],
+    ["Расходы", "Дом", "Коммунальные услуги"],
+    ["Расходы", "Досуг", "Развлечения"],
+    ["Доходы", "Основные", "Зарплата"],
+    ["Доходы", "Дополнительные", "Прочее"],
+]
+
+
+async def get_reference_data_safe() -> list[list[str]]:
+    try:
+        data = await sheets.get_reference_data()
+        return data or DEFAULT_REFERENCE_DATA
+    except Exception as exc:
+        logging.warning("Google Sheets reference lookup failed; using built-in categories: %s", exc)
+        return DEFAULT_REFERENCE_DATA
+
+
+def reference_text(data: list[list[str]]) -> str:
+    return "\n".join(
+        f"Категория: {row[0]}, Группа: {row[1]}, Подкатегория: {row[2]}"
+        for row in data
+        if len(row) >= 3
+    )
+
+
 HELP_TEXT = (
     "Привет! Я Fintor AI, ваш финансовый ментор.\n\n"
     "✍️ <b>Добавление операции:</b>\n"
@@ -50,19 +81,25 @@ async def process_new_transaction(trans: Transaction, message: types.Message):
     if not message.from_user: return
     
     add_transaction_db(user_id=message.from_user.id, trans_data=trans.model_dump())
-    
+
     sheet_row = [
         trans.transaction_date.isoformat(), trans.category, trans.group,
         trans.subcategory, trans.amount, trans.description or "",
     ]
-    await sheets.append_operation(sheet_row)
-    
+    sync_warning = ""
+    try:
+        await sheets.append_operation(sheet_row)
+    except Exception as exc:
+        logging.warning("Google Sheets sync failed; transaction kept locally: %s", exc)
+        sync_warning = "\n\n⚠️ Сохранено локально, но синхронизация с Google Sheets временно недоступна."
+
     await message.answer(
         "✅ <b>Операция добавлена:</b>\n"
         f" • Категория: {trans.category}\n"
         f" • Группа: {trans.group}\n"
         f" • Подкатегория: {trans.subcategory}\n"
         f" • Сумма: {trans.amount:.2f}"
+        f"{sync_warning}"
     )
 
 def robust_regex_parser(text: str) -> Transaction | None:
@@ -93,19 +130,26 @@ async def cmd_report(msg: types.Message):
     url = await sheets.get_report_sheet_url()
     await msg.answer(f"📊 Ваш финансовый отчет:\n{url}")
 
-@dp.message(Command("history"))
-async def cmd_history(msg: types.Message):
-    if not msg.from_user: return
-    
-    transactions = get_last_transactions_db(user_id=msg.from_user.id, limit=5)
+async def send_history(message: types.Message, user_id: int) -> None:
+    transactions = get_last_transactions_db(user_id=user_id, limit=5)
     if not transactions:
-        return await msg.answer("📜 Ваша история операций пока пуста.")
-    
+        await message.answer("📜 Ваша история операций пока пуста.")
+        return
+
     response_lines = ["📜 <b>Последние 5 операций:</b>\n"]
     for tx in transactions:
         date_str = tx.transaction_date.strftime('%d.%m.%Y')
-        response_lines.append(f" • <code>{date_str}</code>: {tx.subcategory} - <b>{tx.amount:.2f} ₽</b>")
-    await msg.answer("\n".join(response_lines))
+        response_lines.append(
+            f" • <code>{date_str}</code>: {tx.subcategory} — <b>{tx.amount:.2f}</b>"
+        )
+    await message.answer("\n".join(response_lines))
+
+
+@dp.message(Command("history"))
+async def cmd_history(msg: types.Message):
+    if not msg.from_user:
+        return
+    await send_history(msg, msg.from_user.id)
 
 @dp.message(Command("ask"))
 async def cmd_ask(msg: types.Message, command: CommandObject):
@@ -133,7 +177,7 @@ async def callback_get_report(cb: types.CallbackQuery):
 @dp.callback_query(F.data == "get_history")
 async def callback_get_history(cb: types.CallbackQuery):
     if cb.message:
-        await cmd_history(cb.message)
+        await send_history(cb.message, cb.from_user.id)
     await cb.answer()
 
 # --- MAIN TRANSACTION PARSING LOGIC ---
@@ -146,8 +190,11 @@ async def process_transaction_text(msg: types.Message):
 
     processing_msg = await msg.answer("Распознаю сложный запрос… 🤖")
     try:
-        ref_text = await asyncio.wait_for(sheets.get_reference_text(), timeout=NETWORK_TIMEOUT)
-        gpt_transaction = await asyncio.wait_for(openai.parse_transaction(msg.text, ref_text), timeout=NETWORK_TIMEOUT)
+        refs = await asyncio.wait_for(get_reference_data_safe(), timeout=NETWORK_TIMEOUT)
+        gpt_transaction = await asyncio.wait_for(
+            openai.parse_transaction(msg.text, reference_text(refs)),
+            timeout=NETWORK_TIMEOUT,
+        )
         
         await processing_msg.delete()
         if gpt_transaction:
@@ -164,7 +211,7 @@ async def fsm_start(cb: types.CallbackQuery, state: FSMContext):
     if not cb.message: return await cb.answer()
     
     await state.clear()
-    refs = await sheets.get_reference_data()
+    refs = await get_reference_data_safe()
     await state.update_data(reference_data=refs)
     
     cats = sorted({r[0] for r in refs if r})
@@ -247,8 +294,11 @@ async def on_startup(bot: Bot):
     logging.info("Bot starting...")
     init_db()
     logging.info("Database initialized.")
-    await sheets.load_reference_data()
-    logging.info("Reference data cache warmed up.")
+    try:
+        await sheets.load_reference_data()
+        logging.info("Reference data cache warmed up.")
+    except Exception as exc:
+        logging.warning("Google Sheets reference warmup failed; bot will keep running: %s", exc)
 
 async def main():
     dp.startup.register(on_startup)

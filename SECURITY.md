@@ -1,16 +1,22 @@
-# Security
+# Безопасность
 
-This public snapshot contains no working API credentials by design.
+В этом публичном snapshot не должны храниться реальные credentials или пользовательские финансовые данные.
 
-Use `.env.example` only as a template and provide your own values locally. Keep the following out of Git:
+Никогда не коммитьте:
 
-- Telegram bot tokens
-- OpenAI API keys
-- Google service-account credentials/private keys
-- spreadsheet identifiers you consider private
-- `.env` files
-- SQLite databases and user data
+- `.env`;
+- Telegram bot token;
+- OpenAI API key;
+- Google service-account credentials;
+- private keys;
+- `fintor.db` и другие локальные базы данных с пользовательскими операциями.
 
-The original private repository is not made public because private historical configuration must remain outside this sanitized snapshot.
+Используйте `.env.example` только как шаблон и подставляйте собственные значения локально.
 
-If a credential is ever committed to a Git repository, removing it from the latest file is not sufficient; revoke/rotate it and treat the historical value as exposed.
+Перед публикацией или изменением публичного репозитория рекомендуется выполнить:
+
+```bash
+python3 scripts/verify_public_snapshot.py
+```
+
+Оригинальный приватный Git history FintorAI сознательно не переносится в этот репозиторий.

@@ -15,6 +15,8 @@ class Settings(BaseModel):
     google_credentials_json: FilePath
     spreadsheet_id: str
     cache_ttl_seconds: int = 3600
+    openai_transaction_model: str = "gpt-4o-mini"
+    openai_advice_model: str = "gpt-4o-mini"
 
 try:
     # Use model_validate for robust parsing and validation from a dictionary
@@ -23,7 +25,9 @@ try:
         "openai_api_key": os.getenv("OPENAI_API_KEY"),
         "google_credentials_json": os.getenv("GOOGLE_CREDENTIALS_JSON_PATH"),
         "spreadsheet_id": os.getenv("SPREADSHEET_ID"),
-        "cache_ttl_seconds": os.getenv("CACHE_TTL_SECONDS", 3600)
+        "cache_ttl_seconds": os.getenv("CACHE_TTL_SECONDS", 3600),
+        "openai_transaction_model": os.getenv("OPENAI_TRANSACTION_MODEL", "gpt-4o-mini"),
+        "openai_advice_model": os.getenv("OPENAI_ADVICE_MODEL", "gpt-4o-mini"),
     })
 
 except ValidationError as e:

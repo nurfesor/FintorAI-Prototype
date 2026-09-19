@@ -12,8 +12,10 @@ class Transaction(BaseModel):
     transaction_date: date = Field(default_factory=date.today)
 
 class OpenAIService:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, transaction_model: str, advice_model: str):
         self.client = AsyncOpenAI(api_key=api_key, timeout=20.0)
+        self.transaction_model = transaction_model
+        self.advice_model = advice_model
 
     async def parse_transaction(self, text: str, reference_text: str) -> Transaction | None:
         system_prompt = (
@@ -23,7 +25,7 @@ class OpenAIService:
         )
         try:
             resp = await self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=self.transaction_model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": text},
@@ -44,7 +46,7 @@ class OpenAIService:
         system_prompt = "You are an experienced and friendly financial advisor. Provide clear, helpful advice."
         try:
             resp = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.advice_model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": text},
@@ -55,4 +57,7 @@ class OpenAIService:
             return resp.choices[0].message.content or "I can't provide an answer right now."
         except APIError as e:
             logging.error(f"OpenAI API error during advice generation: {e}")
-            return "Sorry, I'm having trouble connecting to my knowledge base."
+            return "Не удалось получить ответ AI. Попробуйте позже."
+        except Exception as e:
+            logging.error(f"Unexpected AI advice error: {e}")
+            return "Не удалось получить ответ AI. Попробуйте позже."

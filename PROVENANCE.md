@@ -1,14 +1,22 @@
-# Provenance
+# Происхождение проекта
 
-- Original project: **FintorAI**
-- Original private repository owner: `nurfesor`
-- Original project/repository start: **July 2025**
-- Public sanitized snapshot created: **September 2026**
+- Проект: **FintorAI**
+- Владелец оригинального приватного репозитория: `nurfesor`
+- Начало разработки оригинального проекта: **июль 2025 года**
+- Создание sanitized public snapshot: **сентябрь 2026 года**
 
-This public repository is derived from the current source of an owner-controlled private FintorAI repository.
+`FintorAI-public` создан из текущего безопасного исходного кода принадлежащего владельцу приватного проекта FintorAI.
 
-The public repository intentionally starts with a new, clean Git history. It does **not** copy the private repository's old Git history, issues, pull requests, local databases, credentials, or private configuration artifacts.
+Публичный репозиторий намеренно начинается с новой чистой Git-истории. Старая приватная история, Issues/PR, локальные базы, credentials и приватные конфигурационные артефакты сюда не переносятся. Исторические даты публичных коммитов не подделываются.
 
-A small public-snapshot repair was applied to the current source: the `TransactionFSM` import was corrected to match the repository's flat `states.py` module layout. No historical commit dates are fabricated or recreated.
+Перед публикацией snapshot получил небольшой bounded hardening без изменения основной идеи проекта:
 
-FintorAI later informed a separate private project named **Qarjym**. Qarjym has its own repository and is not published or mirrored here.
+- исправлен импорт `TransactionFSM` под фактическую структуру `states.py`;
+- подключены отсутствовавшие callback-handlers основных кнопок;
+- исправлена привязка истории к пользователю при нажатии inline-кнопки;
+- локальное сохранение операции отделено от возможного сбоя синхронизации Google Sheets;
+- добавлен fallback справочника категорий при временной недоступности Google Sheets;
+- названия AI-моделей вынесены в `.env`;
+- добавлена локальная проверка публичного snapshot на syntax/import/secret ошибки.
+
+FintorAI начинался как идея персонального финансового учёта через Google Sheets, затем развился в Telegram-бот. Позже этот опыт и продуктовая идея стали основой для отдельного проекта **Qarjym**. Qarjym имеет собственную архитектуру и репозиторий и не публикуется внутри этого snapshot.

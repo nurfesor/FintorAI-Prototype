@@ -1,68 +1,151 @@
 # FintorAI
 
-FintorAI is an early personal-finance Telegram bot prototype started in **July 2025**.
-It was built to explore a simple workflow: write a transaction in natural language, classify it, save it, and keep a lightweight personal-finance history.
+**FintorAI** — мой ранний проект персонального финансового ассистента, разработка которого началась в **июле 2025 года**.
 
-This repository is a **sanitized public snapshot** of the original private project. The private repository and its historical Git data are not published because they contain private configuration history. No credentials or user data are included here.
+Изначально идея была простой: вести доходы и расходы в **Google Sheets** — хранить операции в таблице, использовать категории и постепенно автоматизировать личный финансовый учёт.
 
-## What it does
+По мере развития проекта стало понятно, что постоянно открывать таблицу и вручную вносить данные неудобно. Поэтому FintorAI начал развиваться в сторону **Telegram-бота**: пользователь пишет обычным текстом, например `кофе 1200`, а бот помогает сохранить и обработать операцию.
 
-- Telegram bot interface built with `aiogram`
-- natural-language transaction parsing with OpenAI
-- regex fallback for simple entries such as `coffee 350`
-- manual category/group/subcategory entry flow
-- local SQLite transaction history
-- optional Google Sheets synchronization and reference categories
-- basic financial-advice command
+Со временем эта идея выросла в отдельный, значительно более крупный проект — **Qarjym**. FintorAI остался важным ранним этапом: именно здесь проверялись базовые идеи быстрого ввода расходов, AI-разбора операций, категорий, истории и синхронизации финансовых данных.
 
-## Stack
+> **Qarjym — продолжение идеи FintorAI.** Сейчас проект развивается отдельно и продолжает дорабатываться. Ссылка на действующий Telegram-бот Qarjym будет добавлена сюда перед публикацией репозитория.
 
-- Python 3
-- aiogram
-- OpenAI API
-- SQLAlchemy + SQLite
-- Google Sheets API
-- Pydantic settings
+## Как развивался проект
 
-## Project history and evolution
+### 1. Google Sheets
 
-FintorAI was one of my early experiments with an AI-assisted personal-finance workflow. The original private repository was created in July 2025. As the idea matured, the product direction and lessons from FintorAI evolved into a separate, larger project called **Qarjym**.
+Первая версия идеи строилась вокруг Google Sheets:
 
-Qarjym continues the broader personal-finance assistant direction with a more developed product architecture. It remains a separate project and its private source code is not included in this repository. A verified live demo link can be published here separately without implying that this FintorAI repository is the same deployment.
+- доходы и расходы хранятся в таблице;
+- операции распределяются по категориям, группам и подкатегориям;
+- таблица используется как простой финансовый журнал и основа для отчётности.
 
-## Setup
+### 2. FintorAI в Telegram
 
-1. Create a Python virtual environment.
-2. Install dependencies:
+Следующим шагом стала автоматизация ввода через Telegram. Вместо постоянной работы с таблицей пользователь может взаимодействовать с ботом:
+
+- написать простую операцию: `такси 2500`;
+- добавить операцию вручную по шагам;
+- посмотреть последние операции;
+- открыть отчёт в Google Sheets;
+- задать финансовый вопрос AI;
+- использовать AI для разбора более сложного текста.
+
+### 3. Локальная история + синхронизация
+
+В проект был добавлен SQLite. Операция сначала сохраняется в локальную базу, а затем синхронизируется с Google Sheets.
+
+Если Google Sheets временно недоступен, локально сохранённая операция больше не теряется: бот сообщает о проблеме синхронизации и продолжает работу.
+
+### 4. Эволюция в Qarjym
+
+Позже стало понятно, что идея может быть намного шире простого Telegram-бота и таблицы. На основе опыта FintorAI появился отдельный проект **Qarjym** — более полноценная система персональных финансов с отдельной архитектурой, интерфейсами и дальнейшим развитием продукта.
+
+FintorAI и Qarjym — не один и тот же репозиторий и не один deployment. Этот репозиторий показывает ранний этап развития идеи.
+
+## Что умеет текущий FintorAI
+
+- Telegram-интерфейс на `aiogram`;
+- быстрый ввод операций обычным текстом;
+- regex-парсер для простых операций;
+- AI-разбор более сложных финансовых записей;
+- пошаговый ручной ввод через FSM;
+- локальная история операций в SQLite;
+- синхронизация с Google Sheets;
+- категории / группы / подкатегории;
+- команда финансового совета через AI;
+- fallback на встроенные категории при временной недоступности справочника Google Sheets;
+- обработка основных ошибок внешних сервисов.
+
+## Архитектура
+
+```mermaid
+flowchart LR
+    U[Пользователь] --> TG[Telegram Bot]
+    TG --> P{Разбор операции}
+    P -->|Простой текст| R[Regex parser]
+    P -->|Сложный текст| AI[AI parser]
+    P -->|Ручной ввод| FSM[FSM flow]
+    R --> DB[(SQLite)]
+    AI --> DB
+    FSM --> DB
+    DB --> GS[Google Sheets sync]
+    TG --> H[История]
+    TG --> A[Финансовый совет AI]
+```
+
+Основной принцип ранней версии: **ввести операцию максимально быстро, сохранить её локально и при возможности синхронизировать с таблицей**.
+
+## Структура
+
+- `bot.py` — Telegram handlers, FSM и основной workflow;
+- `database.py` — SQLite / SQLAlchemy;
+- `services/openai_client.py` — AI-разбор операций и финансовые ответы;
+- `services/google_sheets.py` — работа с Google Sheets;
+- `keyboards/inline.py` — Telegram inline-кнопки;
+- `middlewares/error_handler.py` — обработка необработанных ошибок;
+- `import_from_sheets.py` — перенос существующих записей из Google Sheets в SQLite;
+- `states.py` — состояния ручного ввода.
+
+## Запуск
+
+Требуется Python 3.10+.
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
 ```
 
-3. Copy `.env.example` to `.env` and provide your own credentials.
-4. Provide your own Google service-account credentials file if Google Sheets integration is used.
-5. Run:
+Заполните `.env` своими значениями:
+
+```env
+TELEGRAM_BOT_TOKEN=...
+OPENAI_API_KEY=...
+GOOGLE_CREDENTIALS_JSON_PATH=credentials.json
+SPREADSHEET_ID=...
+CACHE_TTL_SECONDS=3600
+OPENAI_TRANSACTION_MODEL=gpt-4o-mini
+OPENAI_ADVICE_MODEL=gpt-4o-mini
+```
+
+Затем:
 
 ```bash
-python bot.py
+python3 bot.py
 ```
 
-## Configuration
+Названия AI-моделей задаются через `.env`, поэтому их можно менять без правки исходного кода.
 
-The application expects these environment variables:
+Реальные токены, ключи, базы данных и Google service-account credentials нельзя коммитить в Git.
 
-- `TELEGRAM_BOT_TOKEN`
-- `OPENAI_API_KEY`
-- `GOOGLE_CREDENTIALS_JSON_PATH`
-- `SPREADSHEET_ID`
-- `CACHE_TTL_SECONDS` (optional, default `3600`)
+## Проверка публичного snapshot
 
-Never commit real credentials, `.env`, database files, or Google credential files.
+Для быстрой проверки структуры репозитория без реальных credentials:
 
-## Status
+```bash
+python3 scripts/verify_public_snapshot.py
+```
 
-Runnable historical prototype / public portfolio snapshot. With your own Telegram, OpenAI and Google credentials configured as described above, the bot can be started with `python bot.py`.
+Проверка контролирует Python syntax, локальные импорты, запрещённые файлы и несколько распространённых сигнатур секретов.
 
-This repository is preserved as an early stage of the product journey. The broader idea continues to be developed in Qarjym, including further product and UX improvements planned beyond HackAlem. This repository itself is not presented as a production-ready financial service.
+## Почему здесь новая Git-история
 
-See [`PROVENANCE.md`](PROVENANCE.md) for public-snapshot provenance and [`SECURITY.md`](SECURITY.md) for credential handling.
+Оригинальный FintorAI — приватный проект с историей разработки с июля 2025 года. В старой истории репозитория присутствовали приватные конфигурационные данные, поэтому делать исходный repository публичным небезопасно.
+
+Этот `FintorAI-public` — **sanitized public snapshot** текущего безопасного исходного кода. Он намеренно имеет новую Git-историю. Старые даты коммитов не подделывались и приватная история не переносилась.
+
+Подробнее: [`PROVENANCE.md`](PROVENANCE.md) и [`SECURITY.md`](SECURITY.md).
+
+## Ограничения раннего прототипа
+
+FintorAI создавался как персональный эксперимент, а не как готовый публичный multi-user сервис. Интеграция Google Sheets рассчитана на одну настроенную таблицу владельца; для полноценного многопользовательского продукта нужна отдельная модель доступа, изоляция данных и production-инфраструктура. Эти задачи уже относятся к следующему этапу развития идеи, а не к историческому snapshot FintorAI.
+
+## Статус проекта
+
+FintorAI — запускаемый ранний прототип и исторический этап развития продукта при корректно настроенных собственных credentials. Он не позиционируется как production-ready финансовый сервис.
+
+Развитие основной идеи продолжается в **Qarjym**. Проект будет дальше дорабатываться и после HackAlem: улучшаться будут пользовательский сценарий, автоматизация финансового учёта, AI-функции и интерфейсы.
+
+**Live demo Qarjym:** ссылка будет добавлена после проверки актуального Telegram username.
