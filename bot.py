@@ -4,6 +4,8 @@ import re
 from datetime import date
 
 from aiogram import Bot, Dispatcher, F, types
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -23,7 +25,10 @@ from states import TransactionFSM
 
 # --- Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-bot = Bot(token=config.bot_token.get_secret_value(), parse_mode="HTML")
+bot = Bot(
+    token=config.bot_token.get_secret_value(),
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+)
 dp = Dispatcher()
 dp.update.outer_middleware(ErrorHandlerMiddleware())
 

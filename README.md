@@ -89,7 +89,7 @@ flowchart LR
 
 ## Запуск
 
-Требуется Python 3.10+.
+Требуется Python 3.10+. Публичный snapshot дополнительно проверяется на Python 3.12.
 
 ```bash
 python3 -m venv .venv
