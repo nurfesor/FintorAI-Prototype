@@ -24,11 +24,11 @@ This repository is a **sanitized public snapshot** of the original private proje
 - Google Sheets API
 - Pydantic settings
 
-## Project history
+## Project history and evolution
 
-FintorAI was one of my early experiments with an AI-assisted personal-finance workflow. The original private repository was created in July 2025. Later, the product ideas and lessons from FintorAI evolved into a separate project called **Qarjym**.
+FintorAI was one of my early experiments with an AI-assisted personal-finance workflow. The original private repository was created in July 2025. As the idea matured, the product direction and lessons from FintorAI evolved into a separate, larger project called **Qarjym**.
 
-Qarjym is a separate private project and is not included in this repository.
+Qarjym continues the broader personal-finance assistant direction with a more developed product architecture. It remains a separate project and its private source code is not included in this repository. A verified live demo link can be published here separately without implying that this FintorAI repository is the same deployment.
 
 ## Setup
 
@@ -61,6 +61,8 @@ Never commit real credentials, `.env`, database files, or Google credential file
 
 ## Status
 
-Historical prototype / public portfolio snapshot. It is shared to demonstrate an original project and its architecture, not as a production-ready financial service.
+Runnable historical prototype / public portfolio snapshot. With your own Telegram, OpenAI and Google credentials configured as described above, the bot can be started with `python bot.py`.
+
+This repository is preserved as an early stage of the product journey. The broader idea continues to be developed in Qarjym, including further product and UX improvements planned beyond HackAlem. This repository itself is not presented as a production-ready financial service.
 
 See [`PROVENANCE.md`](PROVENANCE.md) for public-snapshot provenance and [`SECURITY.md`](SECURITY.md) for credential handling.

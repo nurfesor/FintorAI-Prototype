@@ -118,6 +118,24 @@ async def cmd_ask(msg: types.Message, command: CommandObject):
     except asyncio.TimeoutError:
         await thinking_msg.edit_text("😕 Сервер не отвечает, попробуйте позже.")
 
+@dp.callback_query(F.data == "get_advice")
+async def callback_get_advice(cb: types.CallbackQuery):
+    if cb.message:
+        await cb.message.answer("💡 Задайте вопрос командой: <code>/ask ваш вопрос</code>")
+    await cb.answer()
+
+@dp.callback_query(F.data == "get_report")
+async def callback_get_report(cb: types.CallbackQuery):
+    if cb.message:
+        await cmd_report(cb.message)
+    await cb.answer()
+
+@dp.callback_query(F.data == "get_history")
+async def callback_get_history(cb: types.CallbackQuery):
+    if cb.message:
+        await cmd_history(cb.message)
+    await cb.answer()
+
 # --- MAIN TRANSACTION PARSING LOGIC ---
 @dp.message(F.text, ~F.text.startswith('/'))
 async def process_transaction_text(msg: types.Message):
